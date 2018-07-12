@@ -4,7 +4,6 @@
 #include <string>
 #include <queue>
 #include <unistd.h>
-#include <errno.h>
 
 
 int ExecQueue(std::string cmd);

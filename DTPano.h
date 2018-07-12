@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "Align.h"
+#include "Stitch.h"
 
 #define CAM_NUM 3
 
@@ -29,6 +30,8 @@ std::string ROOT_DIR = "/media/montafan/FE98E29998E25027/EDSDK_File/DTPano/";
 
 HuginBase::Panorama pano;
 //HuginBase::Panorama &pano;
+
+std::string getPrefix(std::string name);
 
 //获取所拍片的街道信息
 int get_street_info(std::string dir);

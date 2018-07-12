@@ -1,29 +1,3 @@
-// -*- c-basic-offset: 4 -*-
-
-/** @file pto_gen.cpp
- *
- *  @brief program to generate a pto file from given image files
- *
- *  @author T. Modes
- *
- */
-
-/*  This program is free software; you can redistribute it and/or
- *  modify it under the terms of the GNU General Public
- *  License as published by the Free Software Foundation; either
- *  version 2 of the License, or (at your option) any later version.
- *
- *  This software is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *  General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public
- *  License along with this software. If not, see
- *  <http://www.gnu.org/licenses/>.
- *
- */
-
 #include <fstream>
 #include <getopt.h>
 #include <vigra/imageinfo.hxx>
@@ -36,6 +10,13 @@
 
 #include "DTPano.h"
 
+std::string getPrefix(std::string name)
+{
+    std::string picPrefix = name.substr(0,name.find_last_of("."));
+
+    printf("picPrefix=%s\n", picPrefix.c_str());
+    return picPrefix;
+}
 
 int get_street_info(std::string dir)   //dir = ROOT_DIR
 {
@@ -225,6 +206,29 @@ int main()
 
         //temp,生成pto
         {
+            // setup output to be exactly similar to input image
+            HuginBase::PanoramaOptions opts;
+
+            if (1)
+            {
+                opts.setProjection(HuginBase::PanoramaOptions::FULL_FRAME_FISHEYE);
+            }
+            else
+            {
+                opts.setProjection(HuginBase::PanoramaOptions::RECTILINEAR);
+            }
+            ///opts.setHFOV(srcImg.getHFOV(), false);
+            ///opts.setWidth(srcImg.getSize().x, false);
+            ///opts.setHeight(srcImg.getSize().y);
+            // output to jpeg format
+            opts.outputFormat = HuginBase::PanoramaOptions::JPEG_m;
+            // m estimator, to be more robust against points on moving objects
+            opts.huberSigma = 2;
+            /// save also exposure value of first image
+            ///opts.outputExposureValue = srcImg.getExposureValue();
+            pano.setOptions(opts);  //PanoCommand::SetPanoOptionsCmd(m_pano, dlg.GetNewPanoramaOptions())
+
+
             for(size_t i=0; i<vecFileList.size(); i++){
                 HuginBase::SrcPanoImage srcImage;
                 srcImage.setFilename(vecFileList[i]);
@@ -285,16 +289,20 @@ int main()
             HuginBase::UIntSet imgs;
             fill_set(imgs,0, pano.getNrOfImages()-1);
 
-            //double m_focalLength = 1.3f;
-            //pano.UpdateFocalLength(imgs, m_focalLength); //
+            double m_focalLength = 1.3f;
+            pano.UpdateFocalLength(imgs, m_focalLength); //
 /*
             std::ofstream script(output.c_str());
-            //pano.printPanoramaScript(script, pano.getOptimizeVector(), pano.getOptions(), imgs, false, hugin_utils::getPathPrefix(output));
             pano.printPanoramaScript(script, pano.getOptimizeVector(), pano.getOptions(), imgs, false);
             script.close();
 */
             std::cout << std::endl << "Written output to " << output << std::endl;
-            ExecCmd();
+
+            //getPrefix("jkp.jpg");//test
+            //test,生成pto
+            //ExecCmd();
+            //test,输出图像
+            // ExecDoStitching();
         }
         //temp end
 
