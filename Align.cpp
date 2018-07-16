@@ -6,8 +6,6 @@ int ExecQueue(std::string cmd)
     return 0;
 }
 
-//execlp("ls","ls","-a",NULL);
-//execlp("/usr/bin/env","env",NULL);
 int ExecCmd()
 {
     std::queue<std::string> cmd;

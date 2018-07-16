@@ -22,11 +22,13 @@
 #endif
 #endif
 
-std::vector<std::string> vecStreetList;//街道信息 //need not swap
-std::vector<std::string> vec0PictureList;//0文件夹中的图片信息 //done
-std::vector<std::string> vecFileList; //每个batch的输入文件名 //not swap
+std::vector<std::string> vecStreetList;//街道信息
+std::vector<std::string> vec0PictureList;//0文件夹中的图片信息,相机0拍摄照片的数目
+std::vector<std::string> vecFileList; //每个batch的输入文件名
 std::string ROOT_DIR = "/media/montafan/FE98E29998E25027/EDSDK_File/DTPano/";
 
+std::string PTOPath;  ///eg. media/montafan/FE98E29998E25027/EDSDK_File/DTPano/gaoxinsilu/PTO/0.pto
+std::string OutputPath;
 
 HuginBase::Panorama pano;
 //HuginBase::Panorama &pano;
