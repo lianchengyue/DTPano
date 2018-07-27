@@ -8,8 +8,9 @@
 
 #include "Align.h"
 #include "Stitch.h"
+#include "DTUtils.h"
 
-#define CAM_NUM 3
+#define CAM_NUM 6
 
 #if 1
 #define CONFIG_FUNC_DEBUG
@@ -34,6 +35,7 @@ HuginBase::Panorama pano;
 //HuginBase::Panorama &pano;
 
 std::string getPrefix(std::string name);
+std::string getPictureName(std::string name);
 
 //获取所拍片的街道信息
 int get_street_info(std::string dir);

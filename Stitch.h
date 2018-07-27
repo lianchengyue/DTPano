@@ -6,7 +6,9 @@
 
 
 int ExecBatchStitching();
-int ExecDoStitching();
 
+int ExecDoStitching();
+int ExecDoStitchingwithArgs(std::string OutputName, std::string PTOPath);
+int ExecDoBatchStitchingwithArgs(std::string OutputName, std::string PTOPath);
 
 #endif // STITCH_H

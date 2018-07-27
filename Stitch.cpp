@@ -8,9 +8,6 @@ int ExecBatchStitching()
 
 int ExecDoStitching()
 {
-    std::string pto_str;
-    std::string output_str;
-
     char *line0[5] = {0};
     line0[0] = "hugin_stitch_project";
     line0[1] = "-o";
@@ -21,6 +18,24 @@ int ExecDoStitching()
     {
         printf("line1 failed\n");
     }
+
+    return 0;
+}
+
+int ExecDoStitchingwithArgs(std::string OutputName, std::string PTOPath)
+{
+    std::string hugin_stitch_project_cmd = "/usr/local/bin/hugin_stitch_project";
+    hugin_stitch_project_cmd = hugin_stitch_project_cmd + " " + "-o" + " " + OutputName + " " + PTOPath;
+    system(hugin_stitch_project_cmd.c_str());
+
+    return 0;
+}
+
+int ExecDoBatchStitchingwithArgs(std::string OutputName, std::string PTOPath)
+{
+    std::string hugin_stitch_project_cmd = "/usr/local/bin/PTBatcherGUI";
+    hugin_stitch_project_cmd = hugin_stitch_project_cmd + " " + "-b -v" + " " + PTOPath + " " + OutputName;
+    system(hugin_stitch_project_cmd.c_str());
 
     return 0;
 }

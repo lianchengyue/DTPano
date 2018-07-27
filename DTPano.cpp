@@ -18,14 +18,143 @@ std::string getPrefix(std::string name)
     return picPrefix;
 }
 
-std::string getPTOName(std::string path)
+std::string getPictureName(std::string path)
 {
     std::string tempstr = path.substr(0,path.find_last_of("."));
-    std::string ptoPrefix = tempstr.substr(path.find_last_of("/")+1);
+    std::string PicturePrefix = tempstr.substr(path.find_last_of("/")+1);
 
     //printf("tempstr=%s\n", tempstr.c_str());
-    printf("ptoPrefix=%s\n", ptoPrefix.c_str());
-    return ptoPrefix;
+    printf("PicturePrefix=%s\n", PicturePrefix.c_str());
+    return PicturePrefix;
+}
+
+std::string setOutputFullPath(std::string streetname, std::string PicturePrefix)
+{
+    OutputPath = ROOT_DIR + streetname + "/" + "output" + "/" + PicturePrefix;
+
+    printf("PicturePrefix=%s\n", OutputPath.c_str());
+    return OutputPath;
+}
+
+std::string getOutputFullPath()
+{
+   return OutputPath;
+}
+
+
+int PTO_Generate(int street_cnt)
+{
+    //取出之前batch的image,并做处理
+    //生成pto
+    // setup output to be exactly similar to input image
+    HuginBase::PanoramaOptions opts;
+
+    opts.setProjection(HuginBase::PanoramaOptions::FULL_FRAME_FISHEYE);
+
+    ///opts.setHFOV(srcImg.getHFOV(), false);
+    ///opts.setWidth(srcImg.getSize().x, false);
+    ///opts.setHeight(srcImg.getSize().y);
+    // output to jpeg format
+    opts.outputFormat = HuginBase::PanoramaOptions::JPEG_m;
+    // m estimator, to be more robust against points on moving objects
+    opts.huberSigma = 2;
+    /// save also exposure value of first image
+    //opts.outputExposureValue = srcImg.getExposureValue();
+    //printf("before, opts.outputExposureValue = %d", opts.outputExposureValue);
+    //opts.outputExposureValue = HuginBase::CalculateMeanExposure::calcMeanExposure(pano);
+    //printf("after, opts.outputExposureValue = %d", opts.outputExposureValue);
+    //曝光校正，低动态范围
+    opts.outputLDRBlended = true;
+    //Set format to JPEG
+    opts.outputImageType ="jpg"; //from PanoPanel::FileFormatChanged
+    opts.quality = 100;
+    opts.remapUsingGPU = true;
+    pano.setOptions(opts);  //PanoCommand::SetPanoOptionsCmd(m_pano, dlg.GetNewPanoramaOptions())
+
+
+    for(size_t i=0; i<vecFileList.size(); i++){
+        HuginBase::SrcPanoImage srcImage;
+        srcImage.setFilename(vecFileList[i]);
+        PTOPath = getPictureName(vecFileList[i]);  //tqq
+        //Set Exposure
+        opts.outputExposureValue = srcImage.getExposureValue();
+        printf("after, opts.outputExposureValue = %d\n", opts.outputExposureValue);
+        pano.setOptions(opts);
+
+        try
+        {
+            vigra::ImageImportInfo info(vecFileList[i].c_str());
+            if(info.width()==0 || info.height()==0)
+            {
+                std::cerr << "ERROR: Could not decode image " << vecFileList[i] << std::endl
+                     << "Skipping this image." << std::endl << std::endl;
+                continue;
+            }
+            srcImage.setSize(info.size());
+            // check for black/white images
+            const std::string pixelType=info.getPixelType();
+            if (pixelType == "BILEVEL")
+            {
+                std::cerr << "ERROR: Image " << vecFileList[i] << " is a black/white images." << std::endl
+                    << "       This is not supported. Convert to grayscale image and try again." << std::endl
+                    << "       Skipping this image." << std::endl;
+                continue;
+            }
+            if((pixelType=="UINT8") || (pixelType=="UINT16") || (pixelType=="INT16"))
+            {
+                srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_EMOR);
+            }
+            else
+            {
+                srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_LINEAR);
+            };
+        }
+        catch(std::exception& e)
+        {
+            std::cerr << "ERROR: caught exception: " << e.what() << std::endl;
+            std::cerr << "Could not read image information for file " << vecFileList[i] << std::endl;
+            std::cerr << "Skipping this image." << std::endl << std::endl;
+            continue;
+        };
+
+        srcImage.readEXIF();
+        bool fovOk=srcImage.applyEXIFValues();
+        {
+            srcImage.setProjection((HuginBase::BaseSrcPanoImage::Projection)3); // 3=HuginBase::SrcPanoImage::FULL_FRAME_FISHEYE
+        }
+
+        pano.addImage(srcImage);
+    }
+
+    if(pano.getNrOfImages()==0)
+    {
+        std::cerr << "Adding images to project files failed." << std::endl;
+        HuginBase::LensDB::LensDB::Clean();
+        return 1;
+    };
+
+    //write output
+    OutputPath = setOutputFullPath(vecStreetList[street_cnt], PTOPath);
+    PTOPath = ROOT_DIR + vecStreetList[street_cnt] + "/" + "PTO" + "/" + PTOPath + ".pto";
+    printf("PTOPath final=%s\n", PTOPath.c_str());
+    HuginBase::UIntSet imgs;
+    fill_set(imgs,0, pano.getNrOfImages()-1);
+
+    double m_focalLength = 15.f; //12.722f;//15.f;
+    pano.UpdateFocalLength(imgs, m_focalLength);
+
+    //写文件
+    std::ofstream script(PTOPath.c_str());
+    //生成原始的空.pto
+    pano.printPanoramaScript(script, pano.getOptimizeVector(), pano.getOptions(), imgs, false);
+    script.close();
+    //写文件结束
+
+    std::cout << std::endl << "Written PTOPath to " << PTOPath << std::endl;
+
+    //清理Panorama
+    pano.reset();
+    return 0;
 }
 
 int get_street_info(std::string dir)   //dir = ROOT_DIR
@@ -162,9 +291,6 @@ int main()
 {
     HuginBase::Panorama pano;
     std::string streetName;//street路径
-    ///std::string output;//.pto的输出路径
-    //std::string output = "/media/montafan/FE98E29998E25027/EDSDK_File/DTPano/gaoxinsilu/PTO/0.pto";//.pto的输出路径
-    //int cam_count = 0;
 
     get_street_info(ROOT_DIR);
 
@@ -188,7 +314,6 @@ int main()
                 char num[64] = {0};
 
                 sprintf(num, "%d", camera_cnt);
-                //input = ROOT_DIR + vecStreetList[street_cnt] + "/" + num + "/";
                 input = ROOT_DIR + vecStreetList[street_cnt] + "/";
 
                 //查看即将放进batch的文件是否完整
@@ -212,110 +337,32 @@ int main()
                 }
             }
             printf("\n");
-        }
 
-        ///Hugin处理阶段,start
-        //取出之前batch的image,并做处理
-        //生成pto
-        // setup output to be exactly similar to input image
-        HuginBase::PanoramaOptions opts;
-
-        opts.setProjection(HuginBase::PanoramaOptions::FULL_FRAME_FISHEYE);
-
-        ///opts.setHFOV(srcImg.getHFOV(), false);
-        ///opts.setWidth(srcImg.getSize().x, false);
-        ///opts.setHeight(srcImg.getSize().y);
-        // output to jpeg format
-        opts.outputFormat = HuginBase::PanoramaOptions::JPEG_m;
-        // m estimator, to be more robust against points on moving objects
-        opts.huberSigma = 2;
-        /// save also exposure value of first image
-        ///opts.outputExposureValue = srcImg.getExposureValue();
-        pano.setOptions(opts);  //PanoCommand::SetPanoOptionsCmd(m_pano, dlg.GetNewPanoramaOptions())
-
-
-        for(size_t i=0; i<vecFileList.size(); i++){
-            HuginBase::SrcPanoImage srcImage;
-            srcImage.setFilename(vecFileList[i]);
-            PTOPath = getPTOName(vecFileList[i]);  //tqq
-
-            try
+            //生成原始PTO
+            PTO_Generate(street_cnt);
+            if(PTOPath.size()>1 && OutputPath.size()>1)
             {
-                vigra::ImageImportInfo info(vecFileList[i].c_str());
-                if(info.width()==0 || info.height()==0)
-                {
-                    std::cerr << "ERROR: Could not decode image " << vecFileList[i] << std::endl
-                         << "Skipping this image." << std::endl << std::endl;
-                    continue;
-                }
-                srcImage.setSize(info.size());
-                // check for black/white images
-                const std::string pixelType=info.getPixelType();
-                if (pixelType == "BILEVEL")
-                {
-                    std::cerr << "ERROR: Image " << vecFileList[i] << " is a black/white images." << std::endl
-                        << "       This is not supported. Convert to grayscale image and try again." << std::endl
-                        << "       Skipping this image." << std::endl;
-                    continue;
-                }
-                if((pixelType=="UINT8") || (pixelType=="UINT16") || (pixelType=="INT16"))
-                {
-                    srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_EMOR);
-                }
-                else
-                {
-                    srcImage.setResponseType(HuginBase::SrcPanoImage::RESPONSE_LINEAR);
-                };
+                //OnAlign,生成完整的pto
+                //ExecCmd();
+                printf("ExecCmdwithArgs(), PTOPath=%s\n", PTOPath.c_str());
+                ExecCmdwithArgs(PTOPath);
+
+                //OnCreate,DoStitching,输出图像
+                //ExecDoStitching();
+#ifdef DO_BATCH_STITCHING
+                printf("ExecDoBatchStitchingwithArgs(), OutputPath=%s, PTOPath=%s\n\n", OutputPath.c_str(), PTOPath.c_str());
+                ExecDoBatchStitchingwithArgs(OutputPath, PTOPath);
+#else
+                printf("ExecDoStitchingwithArgs(), OutputPath=%s, PTOPath=%s\n\n", OutputPath.c_str(), PTOPath.c_str());
+                ExecDoStitchingwithArgs(OutputPath, PTOPath);
+#endif
+                //一个batch结束后，清理vecFileList,batch中的文件名
+                std::vector<std::string>().swap(vecFileList);
             }
-            catch(std::exception& e)
-            {
-                std::cerr << "ERROR: caught exception: " << e.what() << std::endl;
-                std::cerr << "Could not read image information for file " << vecFileList[i] << std::endl;
-                std::cerr << "Skipping this image." << std::endl << std::endl;
-                continue;
-            };
-
-            srcImage.readEXIF();
-            bool fovOk=srcImage.applyEXIFValues();
-            {
-                srcImage.setProjection((HuginBase::BaseSrcPanoImage::Projection)3); // 3=HuginBase::SrcPanoImage::FULL_FRAME_FISHEYE
-            }
-
-            pano.addImage(srcImage);
+            PTOPath = {0};
+            OutputPath = {0};
+            //printf("ExecCmdwithArgs(), PTOPath.size=%d\n", PTOPath.size());
         }
-
-        if(pano.getNrOfImages()==0)
-        {
-            std::cerr << "Adding images to project files failed." << std::endl;
-            HuginBase::LensDB::LensDB::Clean();
-            return 1;
-        };
-
-        //write output
-        PTOPath = ROOT_DIR + vecStreetList[street_cnt] + "/" + "PTO" + "/" + PTOPath;
-        printf("PTOPath final=%s\n", PTOPath.c_str());
-        HuginBase::UIntSet imgs;
-        fill_set(imgs,0, pano.getNrOfImages()-1);
-
-        double m_focalLength = 1.3f;
-        pano.UpdateFocalLength(imgs, m_focalLength);
-///*
-        std::ofstream script(PTOPath.c_str());
-        //生成原始的空.pto
-        pano.printPanoramaScript(script, pano.getOptimizeVector(), pano.getOptions(), imgs, false);
-        script.close();
-///*/
-        std::cout << std::endl << "Written PTOPath to " << PTOPath << std::endl;
-
-        //getPrefix("jkp.jpg");//test
-        //OnAlign,生成完整的pto
-        //ExecCmd();
-        //OnCreate,DoStitching,输出图像
-        // ExecDoStitching();
-        ///Hugin处理阶段,end
-
-        //一个batch结束后，清理vecFileList,batch中的文件名
-        std::vector<std::string>().swap(vecFileList);
 
         //遍历一个街道结束,清除街道的vec0PictureList,相机拍摄照片的数目
         std::vector<std::string>().swap(vec0PictureList);

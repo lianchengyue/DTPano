@@ -8,6 +8,7 @@
 
 int ExecQueue(std::string cmd);
 int ExecCmd();
+int ExecCmdwithArgs(std::string PTOPath);
 
 
 #endif // ALIGN_H

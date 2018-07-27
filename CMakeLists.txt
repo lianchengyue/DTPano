@@ -95,7 +95,7 @@ if(MSVC)
 endif(MSVC)
 
 #added by flq
-add_executable(DTPano ./DTPano/DTPano.cpp ./DTPano/DTPano.h ./DTPano/Align.cpp ./DTPano/Align.h ./DTPano/Stitch.cpp ./DTPano/Stitch.h)
+add_executable(DTPano ./DTPano/DTPano.cpp ./DTPano/DTPano.h ./DTPano/Align.cpp ./DTPano/Align.h ./DTPano/Stitch.cpp ./DTPano/Stitch.h ./DTPano/DTUtils.cpp ./DTPano/DTUtils.h)
 target_link_libraries(DTPano ${common_libs} )
 
 install(TARGETS nona vig_optimize autooptimiser fulla align_image_stack linefind geocpset

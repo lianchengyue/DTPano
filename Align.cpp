@@ -87,3 +87,34 @@ int ExecCmd()
 
     return 0;
 }
+
+int ExecCmdwithArgs(std::string PTOPath)
+{
+    std::string icpfind_cmd = "/usr/local/bin/icpfind";
+    icpfind_cmd = icpfind_cmd + " " + "-o" + " " + PTOPath + " " + PTOPath;
+    system(icpfind_cmd.c_str());
+
+    std::string cpclean_cmd = "/usr/local/bin/cpclean";
+    cpclean_cmd = cpclean_cmd + " " + "-o" + " " + PTOPath + " " + PTOPath;
+    system(cpclean_cmd.c_str());
+
+    std::string linefind_cmd = "/usr/local/bin/linefind";
+    linefind_cmd = linefind_cmd + " " + "--output=" + PTOPath + " " + PTOPath;
+    system(linefind_cmd.c_str());
+
+    std::string checkpto_cmd = "/usr/local/bin/checkpto";
+    checkpto_cmd = checkpto_cmd + " "  + PTOPath;
+    system(checkpto_cmd.c_str());
+
+    //add:  # specify variables that should be optimized
+    std::string autooptimiser_cmd = "/usr/local/bin/autooptimiser";
+    autooptimiser_cmd = autooptimiser_cmd + " " + "-a -m -l -s -o" + " " + PTOPath + " " + PTOPath;
+    system(autooptimiser_cmd.c_str());
+
+    //last step
+    std::string pano_modify_cmd = "/usr/local/bin/pano_modify";
+    pano_modify_cmd = pano_modify_cmd + " " + "--canvas=70% --crop=AUTO" + " " + "--output=" + PTOPath + " " + PTOPath;
+    system(pano_modify_cmd.c_str());
+
+    return 0;
+}
